@@ -3,32 +3,38 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using UnityEngine;
 
 namespace DSPSeedSearch
 {
     public class ModSettings
     {
+        public const int ParallelThreshold = 50000;
+        public const int SeedMaxValue = 100000000;
 
-
-        string filePathSR;
-        string filePathST;
-        string filePathSP;
-        public string FilePathSR { get => filePathSR; private set => filePathSR = value; }
-        public string FilePathST { get => filePathST; private set => filePathST = value; }
-        public string FilePathSP { get => filePathSP; private set => filePathSP = value; }
+        string filePathSearchResults;
+        string filePathSearchTable;
+        string filePathSearchParameters;
+        string filePathSearchAllStatus;
+        string filePathRequestStop;
+        public string FilePathSearchResults { get => filePathSearchResults; private set => filePathSearchResults = value; }
+        public string FilePathSearchTable { get => filePathSearchTable; private set => filePathSearchTable = value; }
+        public string FilePathSearchParameters { get => filePathSearchParameters; private set => filePathSearchParameters = value; }
+        public string FilePathSearchAllStatus { get => filePathSearchAllStatus; private set => filePathSearchAllStatus = value; }
+        public string FilePathRequestStop { get => filePathRequestStop; private set => filePathRequestStop = value; }
 
 
         int totalSeeds;
         int keepSeeds;
         bool runOnGalaxySelect;
         bool searchEveryPossibleSeed;
-        int nThreads;
+        bool useParallelism;
 
         public int TotalSeeds { get => totalSeeds; private set => totalSeeds = value; }
         public int KeepSeeds { get => keepSeeds; private set => keepSeeds = value; }
         public bool RunOnGalaxySelect { get => runOnGalaxySelect; private set => runOnGalaxySelect = value; }
         public bool SearchEveryPossibleSeed { get => searchEveryPossibleSeed; private set => searchEveryPossibleSeed = value; }
-        public int NThreads { get => nThreads; private set => nThreads = value; }
+        public bool UseParallelism { get => useParallelism; private set => useParallelism = value; }
 
         private ModSettings(string root = null)
         {
@@ -36,13 +42,15 @@ namespace DSPSeedSearch
             {
                 root = GameConfig.gameSaveFolder;
             }
-            filePathSR = Path.Combine(root, "DSPseedSearchResults.txt");
-            filePathST = Path.Combine(root, "DSPseedSearchTable.csv");
-            filePathSP = Path.Combine(root, "DSPseedSearchParameters.txt");
-
+            filePathSearchResults = Path.Combine(root, "DSPseedSearchResults.txt");
+            filePathSearchTable = Path.Combine(root, "DSPseedSearchTable.csv");
+            filePathSearchParameters = Path.Combine(root, "DSPseedSearchParameters.txt");
+            filePathSearchAllStatus = Path.Combine(root, "DSPseedSearchAllStatus{0:00}");
+            filePathRequestStop = Path.Combine(root, "requestStop.txt");
+            
             if (!ParseSearchParametersFile())
             {
-                CreateSearchParametersFile(filePathSP);
+                CreateSearchParametersFile(filePathSearchParameters);
                 if (!ParseSearchParametersFile())
                 {
                     DSPSeedSearch.PublicLogger.LogMessage("It appears that we cannot access the settings file, using default settings"); // thils should never happen anyway
@@ -50,6 +58,7 @@ namespace DSPSeedSearch
                     keepSeeds = 10;
                     runOnGalaxySelect = false;
                     searchEveryPossibleSeed = false;
+                    useParallelism = false;
                 }
             }
         }
@@ -65,11 +74,13 @@ namespace DSPSeedSearch
             keepSeeds = -1;
             runOnGalaxySelect = false;
             searchEveryPossibleSeed = false;
+            useParallelism = false;
 
             int runOnGalaxySelectInt = int.MaxValue;
             int searchEveryPossibleSeedInt = int.MaxValue;
+            int useParallelismInt = int.MaxValue;
 
-            if (!File.Exists(filePathSP))
+            if (!File.Exists(filePathSearchParameters))
             {
                 return false;
             }
@@ -78,12 +89,16 @@ namespace DSPSeedSearch
             string[] t;
             try
             {
-                using (StreamReader r = new StreamReader(File.OpenRead(filePathSP)))
+                using (StreamReader r = new StreamReader(File.OpenRead(filePathSearchParameters)))
                 {
-                    for (int i = 0; i < 2; i++)
+                    do
                     {
                         s = r.ReadLine();
                         t = s.Split('=');
+                        if (t.Length < 2)
+                        {
+                            continue;
+                        }
                         t[0] = t[0].Trim();
                         t[1] = t[1].Trim();
 
@@ -117,12 +132,16 @@ namespace DSPSeedSearch
                             }
                             searchEveryPossibleSeed = searchEveryPossibleSeedInt != 0;
                         }
-                        else
+                        else if (t[0].ToUpper().CompareTo("useParallelism".ToUpper()) == 0)
                         {
-                            return false;
+                            if (!int.TryParse(t[1], out useParallelismInt))
+                            {
+                                return false;
+                            }
+                            useParallelism = useParallelismInt != 0;
                         }
                     }
-
+                    while (!r.EndOfStream);
                 }
             }
             catch (Exception e)
@@ -130,17 +149,20 @@ namespace DSPSeedSearch
                 DSPSeedSearch.PublicLogger.LogMessage("ParseSearchParametersFile exception = " + e.StackTrace);
                 return false;
             }
-            if (totalSeeds > 100000000)
+            if (totalSeeds > SeedMaxValue)
             {
-                totalSeeds = 100000000;
+                totalSeeds = SeedMaxValue;
                 searchEveryPossibleSeed = true;
             }
+            if (searchEveryPossibleSeed)
+            {
+                totalSeeds = SeedMaxValue;
+            }
 
-
-            return totalSeeds > 0 && keepSeeds > 0 && runOnGalaxySelectInt != int.MaxValue && searchEveryPossibleSeedInt != int.MaxValue;
+            return totalSeeds > 0 && keepSeeds > 0 && runOnGalaxySelectInt != int.MaxValue && searchEveryPossibleSeedInt != int.MaxValue && useParallelismInt != int.MaxValue;
         }
 
-        static void CreateSearchParametersFile(string filePath, int totalSeeds = 100, int keepSeeds = 10, bool runOnGalaxySelect = false, bool searchEveryPossibleSeed = false)
+        static void CreateSearchParametersFile(string filePath, int totalSeeds = 100, int keepSeeds = 10, bool runOnGalaxySelect = false, bool searchEveryPossibleSeed = false, bool useParallelism = false)
         {
             if (File.Exists(filePath))
             {
@@ -150,8 +172,9 @@ namespace DSPSeedSearch
             {
                 w.WriteLine(string.Format("totalSeeds = {0}", totalSeeds));
                 w.WriteLine(string.Format("keepSeeds = {0}", keepSeeds));
-                w.WriteLine(string.Format("runOnGalaxySelect = {0}", runOnGalaxySelect));
-                w.WriteLine(string.Format("searchEveryPossibleSeed = {0}", searchEveryPossibleSeed));
+                w.WriteLine(string.Format("runOnGalaxySelect = {0}", runOnGalaxySelect ? 1 : 0));
+                w.WriteLine(string.Format("searchEveryPossibleSeed = {0}", searchEveryPossibleSeed ? 1 : 0));
+                w.WriteLine(string.Format("searchEveryPossibleSeed = {0}", useParallelism ? 1 : 0));
             }
         }
     }

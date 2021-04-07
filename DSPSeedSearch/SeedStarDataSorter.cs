@@ -6,7 +6,7 @@ using System.Text;
 namespace DSPSeedSearch
 {
 
-    class SeedStarDataSorter
+    public struct SeedStarDataSorter
     {
         public int keep;
         public List<int> seeds;
@@ -20,13 +20,14 @@ namespace DSPSeedSearch
             stars = new List<StarData>();
         }
 
-        public void SortThis(int seed, StarData star)
+        public bool Add(int seed, StarData star)
         {
             if (seeds.Count() < keep)
             {
                 seeds.Add(seed);
                 radius.Add(star.dysonRadius);
                 stars.Add(star);
+                return true;
             }
             else
             {
@@ -37,11 +38,13 @@ namespace DSPSeedSearch
                     seeds[minrindex] = seed;
                     radius[minrindex] = star.dysonRadius;
                     stars[minrindex] = star;
+                    return true;
                 }
             }
+            return false;
         }
 
-        public void SortAll()
+        public void Sort()
         {
             for (int i = 0; i < radius.Count() - 1; i++)
             {
@@ -65,10 +68,30 @@ namespace DSPSeedSearch
             }
         }
 
+        public static SeedStarDataSorter SortMultiple(SeedStarDataSorter[] sorters, int keep)
+        {
+            SeedStarDataSorter result = new SeedStarDataSorter(keep);
+
+            foreach (SeedStarDataSorter s in sorters)
+            {
+                for (int i = 0; i < s.seeds.Count(); i++)
+                {
+                    if (result.seeds.Contains(s.seeds[i]))
+                    {
+                        continue;
+                    }
+                    result.Add(s.seeds[i], s.stars[i]);
+                }
+            }
+
+            result.Sort();
+
+            return result;
+        }
+
         public string Print()
         {
             StringBuilder sb = new StringBuilder();
-            //string s = "";
             for (int i = 0; i < stars.Count; i++)
             {
                 StarData star = stars[i];
@@ -82,12 +105,12 @@ namespace DSPSeedSearch
         public string PrintTable()
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append("seed,dysonRadius,dysonLuminosity,starName,type,mass,temperature\r\n");
+            sb.Append("seed,dysonRadius,planetCount,starName,type,mass,temperature,dysonLuminosity\r\n");
             for (int i = 0; i < stars.Count; i++)
             {
                 StarData star = stars[i];
-                sb.Append(string.Format("{0},{3},{2},{4},{5},{6},{7}\r\n",
-                    seeds[i], star.luminosity, star.dysonLumino, star.dysonRadius, star.displayName, star.type, star.mass, star.temperature));
+                sb.Append(string.Format("{0},{3},{8},{4},{5},{6},{7},{2}\r\n",
+                    seeds[i], star.luminosity, star.dysonLumino, star.dysonRadius, star.displayName, star.type, star.mass, star.temperature, star.planetCount));
             }
             sb.AppendLine();
             return sb.ToString();

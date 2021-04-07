@@ -8,6 +8,10 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
+using System.Threading;
+using Unity.Jobs;
+using Unity.Collections;
 
 namespace DSPSeedSearch
 {
@@ -36,48 +40,140 @@ namespace DSPSeedSearch
             {
                 Console.WriteLine(e.ToString());
             }
+        }
 
+        // This will run on the New Game screen, when you open and press Random too
+        [HarmonyPrefix, HarmonyPatch(typeof(UIGalaxySelect), "UpdateParametersUIDisplay")]
+        public static void UIGalaxySelect_UpdateParametersUIDisplay_Prefix(UIGalaxySelect __instance)
+        {
             modSettings = ModSettings.LoadSettings();
-        }
-
-        static StarData AnalyseSeedMaxDSradius(GameDesc gameDesc)
-        {
-            GalaxyData gd = UniverseGen.CreateGalaxy(gameDesc);
-
-            StarData[] stars = gd.stars;
-
-            float maxDSradiusv = float.NegativeInfinity;
-            int maxPosDSRadius = -1;
-            for (int i = 0; i < stars.Length; i++)
+            if (modSettings.RunOnGalaxySelect)
             {
-                if (stars[i].dysonRadius > maxDSradiusv)
+                UIVirtualStarmap starmap = Traverse.Create(__instance).Field("starmap").GetValue() as UIVirtualStarmap;
+
+                GalaxyData gd = starmap.galaxyData;
+
+                //List<float> dsRadii = (from star in gd.stars select star.dysonRadius).ToList(); // Game doesn't like Linq
+                List<float> dsRadii = new List<float>();
+                for (int i = 0; i < gd.starCount; i++)
                 {
-                    maxDSradiusv = stars[i].dysonRadius;
-                    maxPosDSRadius = i;
+                    dsRadii.Add(gd.stars[i].dysonRadius);
                 }
+
+                PublicLogger.LogMessage(string.Format("seed = {0} maxDSradius = {1} planetCount = {3} name = {2}", gd.seed, dsRadii.Max(), gd.stars[dsRadii.IndexOf(dsRadii.Max())].name, gd.stars[dsRadii.IndexOf(dsRadii.Max())].planetCount));
             }
 
-            return stars[maxPosDSRadius];
         }
 
-        static void SearchSeed(GameDesc gameDesc, out StarData maxLumi, out StarData maxDSradius, out StarData maxDSlumi)
+        // This will run on Credits screen
+        [HarmonyPrefix, HarmonyPatch(typeof(UIRoot), "OpenCreditsScreen")]
+        public static void UIRoot_OpenCreditsScreen_Prefix(UIGalaxySelect __instance)
         {
-            GalaxyData gd = UniverseGen.CreateGalaxy(gameDesc);
+            modSettings = ModSettings.LoadSettings();
 
-            StarData[] stars = gd.stars;
+            PublicLogger.LogMessage(string.Format("Searching {0} seeds, keeping the best {1} ones",
+                modSettings.SearchEveryPossibleSeed ? "all" : modSettings.TotalSeeds.ToString(), modSettings.KeepSeeds));
 
-            float maxLumiv = float.NegativeInfinity;
-            int maxPosLum = -1;
-            for (int i = 0; i < stars.Length; i++)
+            int nThreads = modSettings.UseParallelism ? Environment.ProcessorCount : 1; // Can't find a way for Unity's library to run more than this. And .Net's Parallel.For and Thread classes won't work either.
+
+            System.Random rnd = new System.Random((int)(DateTime.Now.Ticks / 10000));
+
+            NativeArray<int> seeds = new NativeArray<int>(nThreads, Allocator.TempJob);
+            NativeArray<SeedStarDataSorter> innerSorters = new NativeArray<SeedStarDataSorter>(nThreads, Allocator.TempJob);
+            NativeArray<bool> aborted = new NativeArray<bool>(nThreads, Allocator.TempJob);
+            for (int n = 0; n < nThreads; n++)
             {
-                if (stars[i].luminosity > maxLumiv)
-                {
-                    maxLumiv = stars[i].luminosity;
-                    maxPosLum = i;
-                }
+                seeds[n] = rnd.Next();
             }
 
-            maxLumi = stars[maxPosLum];
+            SeedSearchParallelJob jobData = new SeedSearchParallelJob();
+            jobData.innerSorters = innerSorters;
+            jobData.seeds = seeds;
+            jobData.nThreads = nThreads;
+            jobData.aborted = aborted;
+
+            JobHandle handle = jobData.Schedule(nThreads, 1);
+
+            handle.Complete();
+            bool anyAborted = false;
+            foreach (bool v in aborted)
+            {
+                anyAborted |= v;
+            }
+            if (anyAborted)
+            {
+                PublicLogger.LogMessage("Search aborted. You may close the program.");
+                return;
+            }
+
+            SeedStarDataSorter sorter = SeedStarDataSorter.SortMultiple(innerSorters.ToArray(), modSettings.KeepSeeds);
+
+
+            if (File.Exists(modSettings.FilePathSearchTable))
+            {
+                File.Delete(modSettings.FilePathSearchTable);
+            }
+
+            using (StreamWriter w = new StreamWriter(File.OpenWrite(modSettings.FilePathSearchTable)))
+            {
+                w.WriteLine(sorter.PrintTable());
+            }
+
+            #region just for debugging multithreading
+            /*for (int i = 0; i < innerSorters.Count(); i++)
+            {
+                string path = Path.Combine(GameConfig.gameSaveFolder, string.Format("DSPseedSearchTable{0}.csv", i));
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+
+                PublicLogger.LogMessage(innerSorters[i].seeds.Count());
+                PublicLogger.LogMessage(innerSorters[i].radius.Count());
+                PublicLogger.LogMessage(innerSorters[i].stars.Count());
+                for (int j = 0; j < innerSorters[i].seeds.Count(); j++)
+                {
+                    PublicLogger.LogMessage(string.Format("innerSorters[{0}].seeds[{1}] = {2}", i, j, innerSorters[i].seeds[j]));
+                    PublicLogger.LogMessage(string.Format("innerSorters[{0}].radius[{1}] = {2}", i, j, innerSorters[i].radius[j]));
+                    PublicLogger.LogMessage(string.Format("innerSorters[{0}].stars[{1}] = {2}", i, j, innerSorters[i].stars[j] == null ? "null" : "notnull"));
+                }
+
+                innerSorters[i].Sort();
+
+                using (StreamWriter w = new StreamWriter(File.OpenWrite(path)))
+                {
+                    w.WriteLine(innerSorters[i].PrintTable());
+                }
+            }*/
+            #endregion
+
+            PublicLogger.LogMessage(string.Format("Search complete, results saved in {0}", modSettings.FilePathSearchTable));
+
+            innerSorters.Dispose();
+            seeds.Dispose();
+        }
+
+
+        static void AnalyseSeed(GameDesc gameDesc, out StarData maxDSradius, bool threadSafe = false)
+        {
+            GalaxyData gd;
+
+            if (threadSafe)
+            {
+                if (ThreadSafeUniverseGen.algoVersion != UniverseGen.algoVersion)
+                {
+                    PublicLogger.LogMessage(string.Format("Warning: the game's UniverseGen algorithm version ({0}) doesn't match the mod's ThreadSafeUniverseGen version ({1}). The mod needs to be updated to be used with multithreading.)", 
+                        UniverseGen.algoVersion, ThreadSafeUniverseGen.algoVersion));
+                }
+                ThreadSafeUniverseGen ug = new ThreadSafeUniverseGen();
+                gd = ug.CreateGalaxy(gameDesc);
+            }
+            else
+            {
+                gd = UniverseGen.CreateGalaxy(gameDesc);
+            }
+
+            StarData[] stars = gd.stars;
 
             float maxDSradiusv = float.NegativeInfinity;
             int maxPosDSRadius = -1;
@@ -92,114 +188,180 @@ namespace DSPSeedSearch
 
             maxDSradius = stars[maxPosDSRadius];
 
-            float maxDSlumiv = float.NegativeInfinity;
-            int maxPosDSlumi = -1;
-            for (int i = 0; i < stars.Length; i++)
+        }
+
+        static void SaveSearchAllStatus(int nThreads, int n, int currentSeedIndex, SeedStarDataSorter innerSorter)
+        {
+            string filePath = string.Format(modSettings.FilePathSearchAllStatus, n);
+
+            // there is a possibility that a file might be partially written because the game was closed
+            // so I delete it instead of overwriting. If the file is partially written, then the specific thread will start from scratch
+            // (not ideal but ensures true result)
+            if (File.Exists(filePath))
             {
-                if (stars[i].dysonRadius > maxDSlumiv)
+                File.Delete(filePath);
+            }
+
+            using (BinaryWriter w = new BinaryWriter(File.OpenWrite(filePath)))
+            {
+                w.Write(currentSeedIndex);
+                w.Write(nThreads);
+                w.Write(innerSorter.keep);
+                w.Write(innerSorter.seeds.Count());
+                for (int i = 0; i < innerSorter.seeds.Count(); i++)
                 {
-                    maxDSlumiv = stars[i].dysonRadius;
-                    maxPosDSlumi = i;
+                    w.Write(innerSorter.seeds[i]);
                 }
             }
-
-            maxDSlumi = stars[maxPosDSlumi];
-
         }
 
-
-        [HarmonyPrefix, HarmonyPatch(typeof(UIGalaxySelect), "SetStarmapGalaxy")]
-        public static void UIGalaxySelect_SetStarmapGalaxy_Prefix(UIGalaxySelect __instance)
+        static SeedStarDataSorter LoadSearchAllStatus(int nThreads, int n, out int currentSeedIndex)
         {
-            if (modSettings.RunOnGalaxySelect)
+            try
             {
-                GameDesc gameDesc = Traverse.Create(__instance).Field("gameDesc").GetValue() as GameDesc;
-                GalaxyData gd = UniverseGen.CreateGalaxy(gameDesc);
-
-                List<float> dsRadii = (from star in gd.stars select star.dysonRadius).ToList();
-
-                PublicLogger.LogMessage(string.Format("seed = {0} maxDSradius = {1} name = {2}", gameDesc.galaxySeed, dsRadii.Max(), gd.stars[dsRadii.IndexOf(dsRadii.Max())].name));
-            }
-
-        }
-
-
-
-        [HarmonyPrefix, HarmonyPatch(typeof(UIRoot), "OpenCreditsScreen")]
-        public static void UIRoot_OpenCreditsScreen_Prefix(UIGalaxySelect __instance)
-        {
-
-            PublicLogger.LogMessage(string.Format("Searching {0} seeds, keeping the best {1} ones",
-                modSettings.SearchEveryPossibleSeed ? "all" : modSettings.TotalSeeds.ToString(), modSettings.KeepSeeds));
-
-            System.Random random = new System.Random((int)(DateTime.Now.Ticks / 10000));
-
-            SeedStarDataSorter sorter = new SeedStarDataSorter(modSettings.KeepSeeds);
-
-            for (int i = 0; i < modSettings.TotalSeeds; i++)
-            {
-                GameDesc gameDesc = new GameDesc();
-                int seed = -1;
-                if (modSettings.TotalSeeds <= 20000000)
+                string filePath = string.Format(modSettings.FilePathSearchAllStatus, n);
+                SeedStarDataSorter innerSorter = new SeedStarDataSorter(modSettings.KeepSeeds);
+                using (BinaryReader r = new BinaryReader(File.OpenRead(filePath)))
                 {
-                    do
+                    int v = r.ReadInt32();
+                    currentSeedIndex = v;
+                    v = r.ReadInt32();
+                    if (v != nThreads)
                     {
-                        seed = random.Next(100000000);
+                        PublicLogger.LogMessage(string.Format("LoadSearchAllStatus[{0}] number of threads don't match", n));
+                        return innerSorter;
                     }
-                    while (sorter.seeds.Contains(seed));
+                    v = r.ReadInt32();
+                    if (v != modSettings.KeepSeeds)
+                    {
+                        PublicLogger.LogMessage(string.Format("LoadSearchAllStatus[{0}] keepSeeds don't match", n));
+                        return innerSorter;
+                    }
+                    v = r.ReadInt32();
+                    for (int i = 0; i < v; i++)
+                    {
+                        int seed = r.ReadInt32();
+                        GameDesc gameDesc = new GameDesc();
+                        gameDesc.SetForNewGame(nThreads > 1 ? ThreadSafeUniverseGen.algoVersion : UniverseGen.algoVersion, seed, 64, 1, 1f);
+
+                        StarData starData;
+                        AnalyseSeed(gameDesc, out starData, nThreads > 1);
+                        innerSorter.Add(seed, starData);
+                    }
                 }
-                else
-                {
-                    seed = (int)(i / (double)modSettings.TotalSeeds * 100000000);
-                }
 
-                gameDesc.SetForNewGame(UniverseGen.algoVersion, seed, 64, 1, 1f);
-
-                StarData slum, sradius, sdslum;
-                SearchSeed(gameDesc, out slum, out sradius, out sdslum);
-
-                sorter.SortThis(seed, sradius);
-
-                if ((i + 1) % 1000 == 0)
-                {
-                    PublicLogger.LogMessage(string.Format("{0} out of {1} seeds searched {2:P}", i + 1, modSettings.TotalSeeds, (i + 1.0) / modSettings.TotalSeeds));
-                }
+                PublicLogger.LogMessage(string.Format("LoadSearchAllStatus[{0}] successfully loaded", n));
+                return innerSorter;
             }
-
-            if (modSettings.TotalSeeds % 1000 != 0) PublicLogger.LogMessage(string.Format("{0} out of {1} seeds searched {2:P00}", modSettings.TotalSeeds, modSettings.TotalSeeds, 1.0));
-            PublicLogger.LogMessage(string.Format("saving files"));
-
-
-            sorter.SortAll(); 
-
-            string resultString = sorter.Print();
-            /*
-            StarData star = maxDSLuminosity;
-            resultString = resultString + string.Format("Maximum Luminosity Found: seed = {0}; dysonLuminosity = {2}; dysonRadius = {3}; star name = {4}; type = {5}; mass = {6}; temperature = {7}\r\n", 
-                maxDSLuminositySeed, star.luminosity, star.dysonLumino, star.dysonRadius, star.displayName, star.type, star.mass, star.temperature);
-
-            star = maxDSradius;
-            resultString = resultString + string.Format("Maximum Dyson Radius Found: seed = {0}; dysonLuminosity = {2}; dysonRadius = {3}; star name = {4}; type = {5}; mass = {6}; temperature = {7}\r\n\r\n",
-                maxDSLuminositySeed, star.luminosity, star.dysonLumino, star.dysonRadius, star.displayName, star.type, star.mass, star.temperature);
-            */
-            PublicLogger.LogMessage(resultString);
-
-            using (StreamWriter w = new StreamWriter(File.OpenWrite(modSettings.FilePathSR)))
+            catch (Exception)
             {
-                w.BaseStream.Seek(0, SeekOrigin.End);
-                w.WriteLine(resultString);
-                //w.WriteLine(string.Format("seed = {0} maxLum = {1} name = {2}", seed, "?", "?"));
-            }
-
-
-            using (StreamWriter w = new StreamWriter(File.OpenWrite(modSettings.FilePathSR)))
-            {
-                //w.BaseStream.Seek(0, SeekOrigin.End);
-                w.WriteLine(sorter.PrintTable());
-                //w.WriteLine(string.Format("seed = {0} maxLum = {1} name = {2}", seed, "?", "?"));
+                PublicLogger.LogMessage(string.Format("LoadSearchAllStatus[{0}] nonexistent or invalid status file", n));
+                currentSeedIndex = 0;
+                return new SeedStarDataSorter(modSettings.KeepSeeds);
             }
         }
 
+        static bool CheckStopRequested()
+        {
+            if (File.Exists(modSettings.FilePathRequestStop))
+            {
+                try
+                {
+                    using (StreamReader r = new StreamReader(File.Open(modSettings.FilePathRequestStop, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
+                    {
+                        return r.ReadLine().Equals("1");
+                    }
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                using (StreamWriter w = new StreamWriter(File.Open(modSettings.FilePathRequestStop, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite)))
+                {
+                    w.WriteLine("0");
+                }
+                return false;
+            }
+        }
+
+        public struct SeedSearchParallelJob : IJobParallelFor
+        {
+            [ReadOnly]
+            public NativeArray<int> seeds;
+            public int nThreads;
+            public NativeArray<bool> aborted;
+            public NativeArray<SeedStarDataSorter> innerSorters;
+
+            public void Execute(int n)
+            {
+                aborted[n] = false;
+                bool changed = false;
+                System.Random random = new System.Random(seeds[n]);
+                int currentSeedIndex = 0;
+                SeedStarDataSorter innerSorter = modSettings.SearchEveryPossibleSeed ? LoadSearchAllStatus(nThreads, n, out currentSeedIndex) : new SeedStarDataSorter(modSettings.KeepSeeds);
+                innerSorters[n] = innerSorter;
+                int start = n * modSettings.TotalSeeds / nThreads;
+                int end = (n + 1) * modSettings.TotalSeeds / nThreads;
+                if (n == nThreads - 1)
+                {
+                    end = modSettings.TotalSeeds;
+                }
+
+
+                for (int i = currentSeedIndex; i < end - start; i++)
+                {
+                    GameDesc gameDesc = new GameDesc();
+                    int seed = -1;
+                    if (modSettings.SearchEveryPossibleSeed)
+                    {
+                        seed = i + start;
+                    }
+                    else
+                    {
+                        do
+                        {
+                            seed = random.Next(ModSettings.SeedMaxValue);
+                        }
+                        while (innerSorter.seeds.Contains(seed));
+                    }
+
+                    gameDesc.SetForNewGame(nThreads > 1 ? ThreadSafeUniverseGen.algoVersion : UniverseGen.algoVersion, seed, 64, 1, 1f);
+
+                    StarData sradius;
+                    AnalyseSeed(gameDesc, out sradius, threadSafe: nThreads > 1);
+
+                    changed |= innerSorter.Add(seed, sradius);
+
+                    if ((i + 1) % 1000 == 0)
+                    {
+                        PublicLogger.LogMessage(string.Format("Thread {3}/{4}: {0} out of {1} seeds searched {2:P}",
+                            i + 1, end - start, (i + 1.0) / (end - start), n + 1, nThreads));
+                        if (changed && modSettings.SearchEveryPossibleSeed)
+                        {
+                            changed = false;
+                            SaveSearchAllStatus(nThreads, n, i + 1, innerSorter);
+                        }
+                        if (CheckStopRequested())
+                        {
+                            PublicLogger.LogMessage(string.Format("Thread {0}/{1}: this thread is ready to be terminated. You may close the program whenever all threads are at this state.",
+                                n + 1, nThreads));
+                            aborted[n] = true;
+                            return;
+                        }
+                    }
+                }
+
+                if ((end - start) % 1000 != 0)
+                {
+                    PublicLogger.LogMessage(string.Format("Thread {3}/{4}: {0} out of {1} seeds searched {2:P}",
+                        end - start, end - start, 1.0, n + 1, nThreads));
+                }
+
+            }
+        }
 
     }
 }
