@@ -26,7 +26,7 @@ When using the mod through the `Credits` screen, it should create a file called 
 
 `runOnGalaxySelect`: controls if the mod will run in the `New Game` screen. `0` for disabled, `1` for enabled.
 
-`searchEveryPossibleSeed`: basically overrides `totalSeeds` value to `100000000`. The total number of seeds.
+`searchEveryPossibleSeed`: basically overrides `totalSeeds` value to `100000000` if it's value is `1`. The total number of seeds.
 
 `useParallelism`: controls if the mod will use parallel threads to search the seeds. `0` for single-threaded operation, `1` for multithreaded.
 
