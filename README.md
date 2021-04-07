@@ -45,8 +45,6 @@ For each thread, for every 1000 seeds searched, the mod will write to files name
 
 If the execution is aborted during the search, there is a possibility that one of these files gets corrupted. For this reason I made the mod create a file named `requestStop.txt`, it should only contain the character `0` on it, if you ever want to stop the calculation, write a `1` on its place and save the file. This will make the threads stop working whenever they reach the end of the next 1000 seeds. Wait until the mod outputs "Search aborted. You may close the program." to close it. Whenever you're ready to resume the search, just make sure to revert back the `requestStop.txt` value to `0`.
 
-**There is some additional info about searching through all seeds that will be explained later**
-
 ## How to build the mod by yourself
 
 **TODO**
