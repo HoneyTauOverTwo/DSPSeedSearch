@@ -8,6 +8,8 @@ First you need to install BepInEx into the game. Download the [latest BepInEx_x6
 
 After opening the game with BepInEx installed, it should create more files and folders under the BepInEx folder. If BepInEx's debug console is not shown, edit the file BepInEx\config\BepInEx.cfg changing the value under `[Logging.Console]` to `Enabled = true`. This will allow you to see the mod's output.
 
+Download the [latest release of DSPSeedSearch](/releases/) and extract the dll under BepInEx\plugins folder.
+
 ## How to use
 
 The mod operates in two different ways:
