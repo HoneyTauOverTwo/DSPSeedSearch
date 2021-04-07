@@ -35,7 +35,15 @@ When using the mod through the `Credits` screen, it should create a file called 
 Note that I had to copy and edit a portion of the map generation code from the game to make it thread-safe, which means that, if the map generation algorithm gets updated, the edited files have to be updated as well. If the algorithm version diverges, the mod *should* show a warning message.
 The single-threaded version of the search will use the game's generation code directly.
 
-Another important thing to note is that this mode will search through the seeds using the default settings for map generation (**list settings later**).
+Another important thing to note is that this mode will search through the seeds using the default settings for map generation (number of stars and resource multiplier).
+
+### Searching through every single seed
+
+It should take about 4.5 days of processing on a i7 using the multithreading mode to search through every seed. Also, if you choose to keep 200 seeds, the game will use about 5 GB of RAM. RAM usage will increase proportional to the number of seeds to keep multiplied by the number of logical processors you have.
+
+For each thread, for every 1000 seeds searched, the mod will write to files named `DSPseedSearchAllStatus{00}`, where `{00}` is an integer indexing each thread. These files are used to resume the search that was started on a previous session.
+
+If the execution is aborted during the search, there is a possibility that one of these files gets corrupted. For this reason I made the mod create a file named `requestStop.txt`, it should only contain the character `0` on it, if you ever want to stop the calculation, write a `1` on its place and save the file. This will make the threads stop working whenever they reach the end of the next 1000 seeds. Wait until the mod outputs `Search aborted. You may close the program.` to close it. Whenever you're ready to resume the search, just make sure to revert back the `requestStop.txt` value back to `0`.
 
 **There is some additional info about searching through all seeds that will be explained later**
 
