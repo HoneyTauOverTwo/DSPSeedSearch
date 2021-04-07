@@ -37,4 +37,4 @@ Another important thing to note is that this mode will search through the seeds 
 
 ## How to build it yourself
 
-*TODO*
+**TODO**
