@@ -18,7 +18,7 @@ The mod operates in two different ways:
 
 The first one will only output some text in BepInEx's console. The latter will create files in the game's save location folder (%USERPROFILE%\Documents\Dyson Sphere Program\ on windows).
 
-### Searching through a portion of seeds
+### Searching through a number of random seeds
 
 When using the mod through the `Credits` screen, it should create a file called `DSPseedSearchParameters.txt`. You may edit this file to change the search parameters:
 
