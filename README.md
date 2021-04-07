@@ -11,7 +11,7 @@ After opening the game with BepInEx installed, it should create more files and 
 ## How to use
 
 The mod operates in two different ways:
-1. showing you the biggest dyson sphere star for the current seed being viewed in the `New Game` window and
+1. showing you the biggest dyson sphere star for the current seed being viewed in the `New Game` window;
 2. searching through a configurable amount of seeds when you click the `Credits` window.
 
 The first one will only output some text in BepInEx's console. The latter will create files in the game's save location folder (%USERPROFILE%\Documents\Dyson Sphere Program\ on windows).
