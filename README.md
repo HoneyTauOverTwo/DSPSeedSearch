@@ -1,6 +1,6 @@
 # DSPSeedSearch
 
-This mod uses BepInEx to inject into the game: https://github.com/BepInEx/BepInEx/releasesIt was originally created for [Francis John's playthrough](https://www.youtube.com/watch?v=1qjqsdjLJ9A)
+This mod uses BepInEx to inject into the game: https://github.com/BepInEx/BepInEx/releases. It was originally created for [Francis John's playthrough](https://www.youtube.com/watch?v=1qjqsdjLJ9A)
 
 ## How to install
 
