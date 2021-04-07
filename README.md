@@ -37,6 +37,8 @@ The single-threaded version of the search will use the game's generation code di
 
 Another important thing to note is that this mode will search through the seeds using the default settings for map generation (**list settings later**).
 
+**There is some additional info about searching through all seeds that will be explained later**
+
 ## How to build it yourself
 
 **TODO**
