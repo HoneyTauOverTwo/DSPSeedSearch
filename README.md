@@ -47,6 +47,6 @@ If the execution is aborted during the search, there is a possibility that one o
 
 **There is some additional info about searching through all seeds that will be explained later**
 
-## How to build it yourself
+## How to build the mod by yourself
 
 **TODO**
