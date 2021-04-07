@@ -19,10 +19,15 @@ The first one will only output some text in BepInEx's console. The latter will c
 ### Searching through seeds
 
 When using the mod through the `Credits` screen, it should create a file called `DSPseedSearchParameters.txt`. You may edit this file to change the search parameters:
+
 `totalSeeds`: the total number of seeds to search for.
+
 `keepSeeds`: the number of seeds to keep in memory and write down in the `DSPseedSearchTable.csv` output file.
+
 `runOnGalaxySelect`: controls if the mod will run in the `New Game` screen. `0` for disabled, `1` for enabled.
+
 `searchEveryPossibleSeed`: basically overrides `totalSeeds` value to `100000000`. The total number of seeds.
+
 `useParallelism`: controls if the mod will use parallel threads to search the seeds. `0` for single-threaded operation, `1` for multithreaded.
 
 Note that I had to copy and edit a portion of the map generation code from the game to make it thread-safe, which means that, if the map generation algorithm gets updated, the edited files have to be updated as well. If the algorithm version diverges, the mod *should* show a warning message.
