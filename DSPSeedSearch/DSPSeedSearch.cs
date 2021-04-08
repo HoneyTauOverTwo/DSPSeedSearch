@@ -31,7 +31,7 @@ namespace DSPSeedSearch
             Logger.LogInfo("DSPSeedSearch Awoken");
             PublicLogger = Logger;
 
-            harmony = new Harmony("org.picamula.plugins.dspseedsearch");
+            harmony = new Harmony(pluginGuid);
             try
             {
                 harmony.PatchAll(typeof(DSPSeedSearch));
