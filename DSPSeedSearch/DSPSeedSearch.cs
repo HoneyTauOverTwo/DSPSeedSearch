@@ -78,9 +78,9 @@ namespace DSPSeedSearch
 
             System.Random rnd = new System.Random((int)(DateTime.Now.Ticks / 10000));
 
-            NativeArray<int> seeds = new NativeArray<int>(nThreads, Allocator.TempJob);
-            NativeArray<SeedStarDataSorter> innerSorters = new NativeArray<SeedStarDataSorter>(nThreads, Allocator.TempJob);
-            NativeArray<bool> aborted = new NativeArray<bool>(nThreads, Allocator.TempJob);
+            NativeArray<int> seeds = new NativeArray<int>(nThreads, Allocator.Persistent);
+            NativeArray<SeedStarDataSorter> innerSorters = new NativeArray<SeedStarDataSorter>(nThreads, Allocator.Persistent);
+            NativeArray<bool> aborted = new NativeArray<bool>(nThreads, Allocator.Persistent);
             for (int n = 0; n < nThreads; n++)
             {
                 seeds[n] = rnd.Next();

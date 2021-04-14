@@ -70,38 +70,50 @@ namespace DSPSeedSearch
 
         public static SeedStarDataSorter SortMultiple(SeedStarDataSorter[] sorters, int keep)
         {
-            if (sorters == null)
-            {
-                DSPSeedSearch.PublicLogger.LogMessage("SeedStarDataSorter[] sorters is null");
-            }
-
             SeedStarDataSorter result = new SeedStarDataSorter(keep);
-
-            int n = 0;
-            foreach (SeedStarDataSorter s in sorters)
+            try
             {
-                n++;
-                if (s.seeds == null)
+                if (sorters == null)
                 {
-                    DSPSeedSearch.PublicLogger.LogMessage(string.Format("SeedStarDataSorter[] sorters; sorters{0}.seeds is null", n));
+                    DSPSeedSearch.PublicLogger.LogMessage("SeedStarDataSorter[] sorters is null");
                 }
-                if (s.stars == null)
+
+
+                int n = 0;
+                foreach (SeedStarDataSorter s in sorters)
                 {
-                    DSPSeedSearch.PublicLogger.LogMessage(string.Format("SeedStarDataSorter[] sorters; sorters{0}.stars is null", n));
-                }
-                for (int i = 0; i < s.seeds.Count(); i++)
-                {
-                    if (result.seeds.Contains(s.seeds[i]))
+                    n++;
+                    if (s.seeds == null)
                     {
-                        continue;
+                        DSPSeedSearch.PublicLogger.LogMessage(string.Format("SeedStarDataSorter[] sorters; sorters[{0}].seeds is null", n));
                     }
-                    result.Add(s.seeds[i], s.stars[i]);
+                    if (s.stars == null)
+                    {
+                        DSPSeedSearch.PublicLogger.LogMessage(string.Format("SeedStarDataSorter[] sorters; sorters[{0}].stars is null", n));
+                    }
+                    for (int i = 0; i < s.seeds.Count(); i++)
+                    {
+                        if (s.stars[i] == null)
+                        {
+                            DSPSeedSearch.PublicLogger.LogMessage(string.Format("SeedStarDataSorter[] sorters; sorters[{0}].stars[{1}] is null", n, i));
+                        }
+                        if (result.seeds.Contains(s.seeds[i]))
+                        {
+                            continue;
+                        }
+                        result.Add(s.seeds[i], s.stars[i]);
+                    }
                 }
+
+                result.Sort();
             }
-
-            result.Sort();
-
+            catch (Exception e)
+            {
+                DSPSeedSearch.PublicLogger.LogMessage(e.StackTrace);
+                throw e;
+            }
             return result;
+
         }
 
         public string Print()
