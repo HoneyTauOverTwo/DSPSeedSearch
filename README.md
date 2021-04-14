@@ -4,6 +4,8 @@ This mod uses BepInEx to inject into the Dyson Sphere Program's executable: http
 
 The results for the top 200 seeds for the biggest Dyson Sphere searched through every single possible seed [can be found here](https://github.com/HoneyTauOverTwo/DSPSeedSearch/releases/download/1.2.1/DSPseedSearchTableTop200.csv). This was done with `UniverseGen.algoVersion = 20200403` (DSP version Early access 0.6.17.6137, will still be valid for later versions until they change the UniverseGen).
 
+This table also shows how many planets are around the particular star. Note that the 200th seed has a Dyson Sphere radius only 0.082% smaller than the 1st seed. So basically, if you're just looking for a big Dyson Sphere, all of these seeds are basically the same and you can pick your seed based on other aspects of the galaxy.
+
 ## How to install
 
 First you need to install BepInEx into the game. Download the [latest BepInEx_x64 release](https://github.com/BepInEx/BepInEx/releases) and extract its contents into the game's root folder.
