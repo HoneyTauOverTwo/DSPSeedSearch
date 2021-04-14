@@ -20,7 +20,7 @@ namespace DSPSeedSearch
     {
         public const string pluginGuid = "org.picamula.plugins.dspseedsearch";
         public const string pluginName = "DSPSeedSearch";
-        public const string pluginVersion = "1.2.0.0";
+        public const string pluginVersion = "1.2.1.0";
 
         public static BepInEx.Logging.ManualLogSource PublicLogger;
         public static ModSettings modSettings = null;
