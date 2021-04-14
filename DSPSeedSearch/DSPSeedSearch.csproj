@@ -99,5 +99,8 @@
     <Compile Include="ThreadSafeGameEdits\ThreadSafeStarGen.cs" />
     <Compile Include="ThreadSafeGameEdits\ThreadSafeUniverseGen.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
