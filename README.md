@@ -45,6 +45,8 @@ For each thread, for every 1000 seeds searched, the mod will write to files name
 
 If the execution is aborted during the search, there is a possibility that one of these files gets corrupted. For this reason, the mod creates a file named `requestStop.txt`, it should only contain the character `0` on it, if you ever want to stop the calculation, write a `1` on its place and save the file. This will make the threads stop working whenever they reach the end of the next 1000 seeds. Wait until the mod outputs "Search aborted. You may close the program." to close it. Whenever you're ready to resume the search, just make sure to revert back the `requestStop.txt` value to `0`.
 
+There is one issue on this mode, I'm getting some null exceptions at the end of a search (when it's trying to sort each thread's results together). That only happens if that search goes on for too long, which makes me think it's related to Unity's memory allocation for parallel jobs. The workaround is just launching the search again, it will read the last search's status and complete the job properly.
+
 ## How to build the mod by yourself
 
 **TODO**
