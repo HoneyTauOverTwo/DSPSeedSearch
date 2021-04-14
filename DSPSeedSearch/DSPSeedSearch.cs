@@ -339,23 +339,25 @@ namespace DSPSeedSearch
                     {
                         PublicLogger.LogMessage(string.Format("Thread {3}/{4}: {0} out of {1} seeds searched {2:P}",
                             i + 1, end - start, (i + 1.0) / (end - start), n + 1, nThreads));
-                        if (changed && modSettings.SearchEveryPossibleSeed)
-                        {
-                            changed = false;
-                            SaveSearchAllStatus(nThreads, n, i + 1, innerSorter);
-                        }
                         if (CheckStopRequested())
                         {
                             PublicLogger.LogMessage(string.Format("Thread {0}/{1}: this thread is ready to be terminated. You may close the program whenever all threads are at this state.",
                                 n + 1, nThreads));
                             aborted[n] = true;
+                            SaveSearchAllStatus(nThreads, n, i + 1, innerSorter);
                             return;
+                        }
+                        if (changed && modSettings.SearchEveryPossibleSeed)
+                        {
+                            changed = false;
+                            SaveSearchAllStatus(nThreads, n, i + 1, innerSorter);
                         }
                     }
                 }
 
                 if ((end - start) % 1000 != 0)
                 {
+                    SaveSearchAllStatus(nThreads, n, end - start, innerSorter);
                     PublicLogger.LogMessage(string.Format("Thread {3}/{4}: {0} out of {1} seeds searched {2:P}",
                         end - start, end - start, 1.0, n + 1, nThreads));
                 }

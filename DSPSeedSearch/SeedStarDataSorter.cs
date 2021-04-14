@@ -70,10 +70,25 @@ namespace DSPSeedSearch
 
         public static SeedStarDataSorter SortMultiple(SeedStarDataSorter[] sorters, int keep)
         {
+            if (sorters == null)
+            {
+                DSPSeedSearch.PublicLogger.LogMessage("SeedStarDataSorter[] sorters is null");
+            }
+
             SeedStarDataSorter result = new SeedStarDataSorter(keep);
 
+            int n = 0;
             foreach (SeedStarDataSorter s in sorters)
             {
+                n++;
+                if (s.seeds == null)
+                {
+                    DSPSeedSearch.PublicLogger.LogMessage(string.Format("SeedStarDataSorter[] sorters; sorters{0}.seeds is null", n));
+                }
+                if (s.stars == null)
+                {
+                    DSPSeedSearch.PublicLogger.LogMessage(string.Format("SeedStarDataSorter[] sorters; sorters{0}.stars is null", n));
+                }
                 for (int i = 0; i < s.seeds.Count(); i++)
                 {
                     if (result.seeds.Contains(s.seeds[i]))
