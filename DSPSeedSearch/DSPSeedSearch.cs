@@ -20,6 +20,7 @@ namespace DSPSeedSearch
     {
         public const string pluginGuid = "org.picamula.plugins.dspseedsearch";
         public const string pluginName = "DSPSeedSearch";
+        public const string pluginDescription = "Dyson Sphere Program mod for searching through seeds";
         public const string pluginVersion = "1.2.1.0";
 
         public static BepInEx.Logging.ManualLogSource PublicLogger;
