@@ -6,7 +6,7 @@ The results for the top 200 seeds for the biggest Dyson Sphere searched through 
 
 This table also shows how many planets are around the particular star. Note that the 200th seed has a Dyson Sphere radius only 0.082% smaller than the 1st seed. So basically, if you're just looking for a big Dyson Sphere, all of these seeds are basically the same star size and you can pick your seed based on other aspects of the galaxy.
 
-This search took about 5 days of processing time, so if you want to (throw a penny at me)[(https://www.paypal.com/donate?hosted_button_id=L6AZQDQ3J2754)] to help with electricity and my developing time, it would be greatly appreciated! But don't feel like you have to in any way!!
+This search took about 5 days of processing time, so if you want to (throw a penny at me)(https://www.paypal.com/donate?hosted_button_id=L6AZQDQ3J2754) to help with electricity and my developing time, it would be greatly appreciated! But don't feel like you have to in any way!!
 
 ## How to install
 
