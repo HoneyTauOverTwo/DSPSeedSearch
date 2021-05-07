@@ -55,4 +55,4 @@ There is one issue on this mode, I'm getting some null exceptions at the end of 
 
 ## How to build the mod by yourself
 
-**TODO**
+Haven't gotten around to writing this section down yet, so if you are interested in building it and are having any trouble feel free to message me.
