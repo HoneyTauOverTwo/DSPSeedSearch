@@ -174,7 +174,7 @@ namespace DSPSeedSearch
                 w.WriteLine(string.Format("keepSeeds = {0}", keepSeeds));
                 w.WriteLine(string.Format("runOnGalaxySelect = {0}", runOnGalaxySelect ? 1 : 0));
                 w.WriteLine(string.Format("searchEveryPossibleSeed = {0}", searchEveryPossibleSeed ? 1 : 0));
-                w.WriteLine(string.Format("searchEveryPossibleSeed = {0}", useParallelism ? 1 : 0));
+                w.WriteLine(string.Format("useParallelism = {0}", useParallelism ? 1 : 0));
             }
         }
     }
